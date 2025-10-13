@@ -34,7 +34,7 @@ const corsOptions = {
 
 // --- Middleware ---
 app.use(cors(corsOptions)); // Apply CORS options to all Express routes
-app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
+app.options('/*', cors(corsOptions)); // Enable pre-flight for all routes
 
 app.use(cookieParser());
 app.use(express.json()); // Replaces bodyParser.json()
