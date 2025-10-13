@@ -1,4 +1,3 @@
-// server.js / index.js
 require("dotenv").config();
 const express = require("express");
 const http = require("http");
@@ -23,8 +22,11 @@ const collabHandler = require("./sockets/collabSocket");
 const app = express();
 const server = http.createServer(app);
 
-// --- Frontend URL ---
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+// --- Allowed Frontend Origins ---
+const allowedOrigins = [
+  "http://localhost:5173",                   // local dev
+  process.env.FRONTEND_URL,                  // deployed frontend
+].filter(Boolean); // removes undefined if FRONTEND_URL not set
 
 // --- Middleware ---
 const defaultCookieOptions = {
@@ -35,9 +37,17 @@ const defaultCookieOptions = {
 };
 app.locals.cookieOptions = defaultCookieOptions;
 
-// CORS configuration
+// Dynamic CORS setup
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: function (origin, callback) {
+    // allow requests with no origin (like curl or mobile apps)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error(`CORS policy: Origin ${origin} not allowed`), false);
+    }
+    return callback(null, true);
+  },
   methods: ["GET","HEAD","PUT","PATCH","POST","DELETE"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie", "Cookie"],
@@ -63,7 +73,7 @@ app.use("/api/candidate", candidateRoutes);
 // --- Socket.IO Setup ---
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
