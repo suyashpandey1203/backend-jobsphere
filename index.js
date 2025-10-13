@@ -26,14 +26,12 @@ const server = http.createServer(app);
 const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // --- Default Cookie Options ---
-// Use this throughout your auth routes when calling res.cookie(...)
 const defaultCookieOptions = {
   httpOnly: true,
   secure: false,      // set true in production with HTTPS
   sameSite: "lax",    // 'lax' is fine for localhost cross-port; use 'none' + secure:true in prod if cross-site
   maxAge: 24 * 60 * 60 * 1000, // 1 day
 };
-// Attach for easy access in routes: req.app.locals.cookieOptions
 app.locals.cookieOptions = defaultCookieOptions;
 
 // If behind a proxy (e.g. nginx) in production, enable:
@@ -45,12 +43,14 @@ const corsOptions = {
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,   // required to allow cookies
   allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie", "Cookie"],
-  optionsSuccessStatus: 200, // some browsers (IE) choke on 204 for preflight
+  optionsSuccessStatus: 200,
 };
 
-// enable CORS pre-flight for all routes
+// enable CORS for all routes (this also handles preflight for registered routes)
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+
+// If you still need an explicit global OPTIONS responder (avoid '*' because some path-to-regexp versions break):
+// app.options(/.*/, cors(corsOptions)); // <-- uncomment only if you actually need an explicit fallback
 
 // --- Middleware ---
 app.use(cookieParser());
