@@ -3,74 +3,67 @@ const http = require("http");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { Server } = require("socket.io");
-const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
 
-
-//local imports
+// Route and Socket Handler Imports
 const authRoutes = require("./routes/authRoutes");
+const problemRoutes = require('./routes/problemRoutes');
 const QuestionFetchRouter = require("./routes/QuestionFetchRouter");
-const socketHandler = require("./sockets/socketHandler");
 const assessmentRoutes = require("./routes/AssessmentRoutes");
 const interviewerRoutes = require("./routes/interviewerRoutes");
 const candidateRoutes = require("./routes/candidateRoutes");
-
 const codeRoutes = require("./routes/codeRoutes");
-const problemRoutes = require('./routes/problemRoutes')
-const collabHandler = require("./sockets/collabSocket")
+const socketHandler = require("./sockets/socketHandler");
+const collabHandler = require("./sockets/collabSocket");
 
-
-require("dotenv").config();
-console.log(process.env.JWT_SECRET);
-
+// --- Initialization ---
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: { 
-    origin: "*", 
-    methods: ["GET", "POST"], 
-    credentials: true,
-  },
-});
+// --- CORS Configuration ---
+// Use an environment variable for the frontend URL for flexibility
+const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-app.use(cors(
-  {
-    origin: "*",
-    credentials: true,
-  }
-));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const corsOptions = {
+  origin: frontendURL,
+  credentials: true,
+};
+
+// --- Middleware ---
+app.use(cors(corsOptions)); // Apply CORS to all Express routes
 app.use(cookieParser());
+app.use(express.json()); // Replaces bodyParser.json()
+app.use(express.urlencoded({ extended: true })); // Replaces bodyParser.urlencoded()
 
-// app.use("/api/auth", authRoutes);
-// app.get("/", (req,res) => {
-//   res.send("hello")
-// });
-
+// --- API Routes ---
+app.use('/api/auth', authRoutes);
 app.use('/api/problem', problemRoutes);
-
 app.use("/api/questions", QuestionFetchRouter);
 app.use("/api/assessments", assessmentRoutes);
 app.use("/api/code", codeRoutes);
 app.use("/api/interviewer", interviewerRoutes);
 app.use("/api/candidate", candidateRoutes);
 
-// Socket.io
+// --- Socket.IO Setup ---
+const io = new Server(server, {
+  cors: corsOptions // Reuse the same CORS options for Socket.IO
+});
+
+// General connection handler
 io.on("connection", (socket) => socketHandler(io, socket));
+// Collaboration namespace/room handler
 collabHandler(io);
 
-// ✅ Routes
-app.use("/api/auth", authRoutes);
-
-
-// MongoDB
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.log(err));
-
+// --- Database and Server Startup ---
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected successfully");
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  })
+  .catch(err => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1); // Exit if DB connection fails
+  });
