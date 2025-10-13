@@ -27,18 +27,18 @@ const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const corsOptions = {
   origin: frontendURL,
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE", // Explicitly allow all common methods
-  credentials: true, // Allow cookies and authorization headers
-  allowedHeaders: "Content-Type,Authorization", // Explicitly allow necessary headers
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  allowedHeaders: "Content-Type,Authorization",
 };
 
 // --- Middleware ---
-app.use(cors(corsOptions)); // Apply CORS options to all Express routes
-app.options('/*', cors(corsOptions)); // Enable pre-flight for all routes
+// This single line handles all CORS needs, including pre-flight OPTIONS requests.
+app.use(cors(corsOptions));
 
 app.use(cookieParser());
-app.use(express.json()); // Replaces bodyParser.json()
-app.use(express.urlencoded({ extended: true })); // Replaces bodyParser.urlencoded()
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
