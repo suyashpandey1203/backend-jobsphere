@@ -6,6 +6,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 const cookieParser = require("cookie-parser");
+const morgan = require("morgan"); // ✅ Added Morgan
 
 // Route and Socket Handler Imports
 const authRoutes = require("./routes/authRoutes");
@@ -34,28 +35,28 @@ const defaultCookieOptions = {
 };
 app.locals.cookieOptions = defaultCookieOptions;
 
-// If behind a proxy (e.g. nginx) in production, enable:
-// app.set('trust proxy', 1); // uncomment in production and set secure:true in cookie options
-
 // --- CORS Configuration ---
 const corsOptions = {
-  origin: frontendURL, // exact origin (protocol + host + port)
+  origin: frontendURL,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,   // required to allow cookies
+  credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie", "Cookie"],
   optionsSuccessStatus: 200,
 };
 
-// enable CORS for all routes (this also handles preflight for registered routes)
 app.use(cors(corsOptions));
-
-// If you still need an explicit global OPTIONS responder (avoid '*' because some path-to-regexp versions break):
-// app.options(/.*/, cors(corsOptions)); // <-- uncomment only if you actually need an explicit fallback
 
 // --- Middleware ---
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ✅ Morgan for logging HTTP requests
+if (process.env.NODE_ENV === "production") {
+  app.use(morgan("combined")); // detailed logs for production
+} else {
+  app.use(morgan("dev")); // concise colorful logs for development
+}
 
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
