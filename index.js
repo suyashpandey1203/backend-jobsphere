@@ -1,10 +1,11 @@
+// server.js
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 const cookieParser = require("cookie-parser");
-require("dotenv").config();
 
 // Route and Socket Handler Imports
 const authRoutes = require("./routes/authRoutes");
@@ -21,21 +22,37 @@ const collabHandler = require("./sockets/collabSocket");
 const app = express();
 const server = http.createServer(app);
 
-// --- CORS Configuration ---
-// Use an environment variable for the frontend URL for flexibility
+// --- Frontend Origin (use env var) ---
 const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
 
+// --- Default Cookie Options ---
+// Use this throughout your auth routes when calling res.cookie(...)
+const defaultCookieOptions = {
+  httpOnly: true,
+  secure: false,      // set true in production with HTTPS
+  sameSite: "lax",    // 'lax' is fine for localhost cross-port; use 'none' + secure:true in prod if cross-site
+  maxAge: 24 * 60 * 60 * 1000, // 1 day
+};
+// Attach for easy access in routes: req.app.locals.cookieOptions
+app.locals.cookieOptions = defaultCookieOptions;
+
+// If behind a proxy (e.g. nginx) in production, enable:
+// app.set('trust proxy', 1); // uncomment in production and set secure:true in cookie options
+
+// --- CORS Configuration ---
 const corsOptions = {
-  origin: frontendURL,
+  origin: frontendURL, // exact origin (protocol + host + port)
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-  allowedHeaders: "Content-Type,Authorization",
+  credentials: true,   // required to allow cookies
+  allowedHeaders: ["Content-Type", "Authorization", "Set-Cookie", "Cookie"],
+  optionsSuccessStatus: 200, // some browsers (IE) choke on 204 for preflight
 };
 
-// --- Middleware ---
-// This single line handles all CORS needs, including pre-flight OPTIONS requests.
+// enable CORS pre-flight for all routes
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
+// --- Middleware ---
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -51,7 +68,11 @@ app.use("/api/candidate", candidateRoutes);
 
 // --- Socket.IO Setup ---
 const io = new Server(server, {
-  cors: corsOptions // Reuse the same CORS options for Socket.IO
+  cors: {
+    origin: frontendURL,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 // General connection handler
@@ -69,5 +90,7 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => {
     console.error("❌ MongoDB connection error:", err);
-    process.exit(1); // Exit if DB connection fails
+    process.exit(1);
   });
+
+module.exports = app;
