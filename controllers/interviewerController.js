@@ -1,6 +1,5 @@
 const { Interviewer } = require("../models/User");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
 
 // 🔹 Helper: Generate JWT
 const generateToken = (id, role) => {
@@ -9,6 +8,7 @@ const generateToken = (id, role) => {
 
 // ----------------- SIGNUP -----------------
 exports.signup = async (req, res) => {
+  // ... (No changes needed here)
   try {
     const { name, email, password, company, department } = req.body;
 
@@ -52,12 +52,8 @@ exports.login = async (req, res) => {
 
     const token = generateToken(interviewer._id, "interviewer");
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    // ✅ Use the shared cookie options from app.locals
+    res.cookie("token", token, req.app.locals.cookieOptions);
 
     res.status(200).json({
       message: "Interviewer login successful",
@@ -72,11 +68,8 @@ exports.login = async (req, res) => {
 // ----------------- LOGOUT -----------------
 exports.logout = async (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
+    // ✅ Use the shared cookie options for consistency
+    res.clearCookie("token", req.app.locals.cookieOptions);
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Logout Error:", error);
@@ -87,21 +80,14 @@ exports.logout = async (req, res) => {
 // ----------------- DELETE ACCOUNT -----------------
 exports.deleteAccount = async (req, res) => {
   try {
-    // const token = req.cookies.token;
-    // if (!token) return res.status(401).json({ message: "Unauthorized" });
-
-    // const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = req.user;
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    await Interviewer.findByIdAndDelete(decoded.id);
+    // Note: 'decoded' was not defined here, using req.user.id
+    await Interviewer.findByIdAndDelete(user.id);
 
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
+    // ✅ Use the shared cookie options for consistency
+    res.clearCookie("token", req.app.locals.cookieOptions);
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
@@ -112,6 +98,7 @@ exports.deleteAccount = async (req, res) => {
 
 // ----------------- VERIFY AUTH -----------------
 exports.verifyAuth = async (req, res) => {
+  // ... (No changes needed here)
   try {
     const token = req.cookies.token;
     if (!token) return res.json({ loggedIn: false });

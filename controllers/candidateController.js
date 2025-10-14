@@ -8,14 +8,13 @@ const generateToken = (id, role) => {
 
 // ----------------- SIGNUP -----------------
 exports.signup = async (req, res) => {
+  // ... (No changes needed here)
   try {
     const { name, email, password, resume_url, portfolio_url } = req.body;
-    console.log(req.body)
     const existingUser = await Candidate.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
-
     const newCandidate = await Candidate.create({
       name,
       email,
@@ -23,7 +22,6 @@ exports.signup = async (req, res) => {
       resume_url,
       portfolio_url,
     });
-
     res.status(201).json({
       message: "Candidate signup successful! Please login.",
       user: { id: newCandidate._id, name: newCandidate.name, email: newCandidate.email },
@@ -38,25 +36,18 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const candidate = await Candidate.findOne({ email });
     if (!candidate) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
-
     const isMatch = await candidate.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
-
     const token = generateToken(candidate._id, "candidate");
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    // ✅ Use the shared cookie options from app.locals
+    res.cookie("token", token, req.app.locals.cookieOptions);
 
     res.status(200).json({
       message: "Candidate login successful",
@@ -71,11 +62,8 @@ exports.login = async (req, res) => {
 // ----------------- LOGOUT -----------------
 exports.logout = async (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
+    // ✅ Use the shared cookie options for consistency
+    res.clearCookie("token", req.app.locals.cookieOptions);
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Logout Error:", error);
@@ -91,16 +79,12 @@ exports.deleteAccount = async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await Candidate.findById(decoded.id);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
     await Candidate.findByIdAndDelete(decoded.id);
 
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
+    // ✅ Use the shared cookie options for consistency
+    res.clearCookie("token", req.app.locals.cookieOptions);
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
@@ -111,13 +95,13 @@ exports.deleteAccount = async (req, res) => {
 
 // ----------------- VERIFY AUTH -----------------
 exports.verifyAuth = async (req, res) => {
+  // ... (No changes needed here)
   try {
     const token = req.cookies.token;
     if (!token) return res.json({ loggedIn: false });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await Candidate.findById(decoded.id);
-
     if (!user) return res.json({ loggedIn: false });
 
     res.json({
