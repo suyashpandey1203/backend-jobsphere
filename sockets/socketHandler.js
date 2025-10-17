@@ -1,6 +1,5 @@
 const userSocketMap = {}; // optional: track userId -> socket.id
 const roomHostMap = {};   // roomId -> hostSocketId
-const roomUserSockets = {}; // roomId -> Set of socket IDs
 
 module.exports = (io, socket) => {
   console.log("New video socket connected:", socket.id);
@@ -8,12 +7,6 @@ module.exports = (io, socket) => {
   socket.on("join-room", ({ roomId, userId }) => {
     // (optional) userId -> socketId
     if (userId) userSocketMap[userId] = socket.id;
-
-    // Track room membership
-    if (!roomUserSockets[roomId]) {
-      roomUserSockets[roomId] = new Set();
-    }
-    roomUserSockets[roomId].add(socket.id);
 
     socket.join(roomId);
     console.log(`${userId || socket.id} joined video room ${roomId} (socket: ${socket.id})`);
@@ -41,43 +34,25 @@ module.exports = (io, socket) => {
       // Tell this user who the host is
       socket.emit("host-info", { hostId });
       
-      // Prevent self-connection: only send existing-users if not the host
-      if (socket.id !== hostId) {
-        // Let this guest know about the host (ONLY the host) as an existing user
-        socket.emit("existing-users", [hostId]);
-        
-        // Let host know a guest joined (only if this isn't the host somehow rejoining)
-        io.to(hostId).emit("user-connected", socket.id);
-      }
+      // Let this guest know about the host (ONLY the host) as an existing user
+      socket.emit("existing-users", [hostId]);
+      
+      // Let host know a guest joined
+      io.to(hostId).emit("user-connected", socket.id);
     }
 
     // Step 3: Handle signaling relays
     socket.on("offer", ({ to, sdp }) => {
-      // Prevent self-connections
-      if (to === socket.id) {
-        console.log(`Blocked self-offer from ${socket.id} to self`);
-        return;
-      }
       console.log(`Relaying offer from ${socket.id} to ${to}`);
       io.to(to).emit("offer", { from: socket.id, sdp });
     });
 
     socket.on("answer", ({ to, sdp }) => {
-      // Prevent self-connections
-      if (to === socket.id) {
-        console.log(`Blocked self-answer from ${socket.id} to self`);
-        return;
-      }
       console.log(`Relaying answer from ${socket.id} to ${to}`);
       io.to(to).emit("answer", { from: socket.id, sdp });
     });
 
     socket.on("ice-candidate", ({ to, candidate }) => {
-      // Prevent self-connections
-      if (to === socket.id) {
-        console.log(`Blocked self-ICE candidate from ${socket.id} to self`);
-        return;
-      }
       io.to(to).emit("ice-candidate", { from: socket.id, candidate });
     });
 
@@ -86,15 +61,7 @@ module.exports = (io, socket) => {
       console.log(`${userId || socket.id} disconnected from video room (socket: ${socket.id})`);
 
       // Remove from maps
-      if (userId && userSocketMap[userId] === socket.id) delete userSocketMap[userId];
-      
-      // Remove from room tracking
-      if (roomUserSockets[roomId]) {
-        roomUserSockets[roomId].delete(socket.id);
-        if (roomUserSockets[roomId].size === 0) {
-          delete roomUserSockets[roomId];
-        }
-      }
+      if (userId && userSocketMap[userId]) delete userSocketMap[userId];
 
       // If host leaves → handle host reassignment
       if (roomHostMap[roomId] === socket.id) {
