@@ -1,29 +1,33 @@
 const express = require('express');
 const router = express.Router();
 const assessmentController = require('../controllers/AssessmentController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protectInterviewer } = require('../middlewares/authMiddleware');
 
+// Specific routes first 👇
+router.get('/latest', protectInterviewer, (req, res, next) => {
+  console.log("latest");
+  next();
+}, assessmentController.getLatestAssessments);
 
+router.get("/my-assessments", protectInterviewer, (req, res, next) => {
+  console.log("/my-assessments");
+  next();
+}, assessmentController.getMyAssessments);
 
-// --- Routes for Assessments ---
+router.post('/', protectInterviewer, (req, res, next) => {
+  console.log("/");
+  next();
+}, assessmentController.createAssessment);
 
-// @route   POST api/assessments
-// @desc    Create a new assessment
-// @access  Private (requires authentication)
-router.post('/',protect , assessmentController.createAssessment);
+// Dynamic routes later 👇
+router.get('/:id', protectInterviewer, (req, res, next) => {
+  console.log(":id");
+  next();
+}, assessmentController.getAssessmentDetails);
 
-
-router.get("/my-assessments", protect,assessmentController.getMyAssessments);
-
-// @route   GET api/assessments/:id
-// @desc    Get full details for a single assessment
-// @access  Private
-router.get('/:id', protect ,assessmentController.getAssessmentDetails);
-
-// @route   POST api/assessments/:id/invite
-// @desc    Invite a participant (interviewer or candidate) to an assessment
-// @access  Private
-router.post('/:id/invite',protect , assessmentController.inviteParticipant);
-
+router.post('/:id/invite', protectInterviewer, (req, res, next) => {
+  console.log(":id/invite");
+  next();
+}, assessmentController.inviteParticipant);
 
 module.exports = router;

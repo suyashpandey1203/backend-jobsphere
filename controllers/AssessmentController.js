@@ -202,3 +202,68 @@ exports.inviteParticipant = async (req, res) => {
     }
 };
 
+
+
+
+exports.getLatestAssessments = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    //  Get assessments where user is an interviewer participant
+    const participantDocs = await AssessmentParticipant.find({
+      user: userId,
+      role: "interviewer",
+    }).select("assessment");
+
+    const assessmentIds = participantDocs.map(p => p.assessment);
+
+    //  Get assessments created by user OR where user is a participant
+    const assessments = await Assessment.find({
+      $or: [{ created_by: userId }, { _id: { $in: assessmentIds } }],
+    })
+      .populate({ path: "created_by", select: "name email" })
+      .populate({ path: "questions", select: "title difficulty" })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .lean(); //  lean() for faster read-only docs
+
+    //  Attach participants (interviewers & candidates) for each assessment
+    const assessmentsWithParticipants = await Promise.all(
+      assessments.map(async (a) => {
+        const participants = await AssessmentParticipant.find({
+          assessment: a._id,
+        })
+          .populate("user", "name email")
+          .lean();
+
+        // Separate by role
+        const interviewers = participants.filter(p => p.role === "interviewer").map(p => p.user);
+        const candidates = participants.filter(p => p.role === "candidate").map(p => p.user);
+
+        return {
+          ...a,
+          participants: {
+            interviewers,
+            candidates,
+          },
+        };
+      })
+    );
+
+    //  Group by creator (optional, for UI organization)
+    const grouped = {};
+    assessmentsWithParticipants.forEach(a => {
+      const creatorName = a.created_by?.name || "Unknown";
+      if (!grouped[creatorName]) grouped[creatorName] = [];
+      grouped[creatorName].push(a);
+    });
+
+    res.status(200).json({
+      total: assessmentsWithParticipants.length,
+      grouped,
+    });
+  } catch (error) {
+    console.error("Error fetching assessments:", error);
+    res.status(500).json({ message: "Error fetching latest assessments" });
+  }
+};
