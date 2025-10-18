@@ -17,6 +17,7 @@
     "nodemailer": "^7.0.9",
     "openai": "^6.0.0",
     "puppeteer": "^24.24.0",
+    "puppeteer-chromium-resolver": "^24.0.2",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "socket.io": "^4.8.1",
