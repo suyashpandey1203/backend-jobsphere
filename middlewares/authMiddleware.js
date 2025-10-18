@@ -1,22 +1,36 @@
 const jwt = require("jsonwebtoken");
-const { Interviewer } = require("../models/User");
+const { Candidate, Interviewer } = require("../models/User");
 
-exports.protect = async (req, res, next) => {
-  let token = req.cookies.token; // ✅ get token from cookies
-  console.log("Token from cookies:", token); // Debugging line
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
-  }
-
+// Middleware for Candidate
+exports.protectCandidate = async (req, res, next) => {
   try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "Not authorized, no token" });
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await Interviewer.findById(decoded.id).select("-password");
-    console.log(req.user);
+    req.user = await Candidate.findById(decoded.id).select("-password");
+    if (!req.user) return res.status(401).json({ message: "Candidate not found" });
+
     next();
   } catch (error) {
-
+    console.error(error);
     res.status(401).json({ message: "Not authorized, token failed" });
   }
 };
 
+// Middleware for Interviewer
+exports.protectInterviewer = async (req, res, next) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "Not authorized, no token" });
 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await Interviewer.findById(decoded.id).select("-password");
+    if (!req.user) return res.status(401).json({ message: "Interviewer not found" });
+
+    next();
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({ message: "Not authorized, token failed" });
+  }
+};

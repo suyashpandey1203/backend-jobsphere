@@ -1,77 +1,75 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs'); // Import bcrypt
+const bcrypt = require('bcryptjs');
 
-// 1. Define the Base Schema
+// 1️⃣ Define the Base Schema
 const UserSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true,
-    },
-    password: {
-        type: String,
-        required: true,
-    },
-    // role: {
-    //     type: String,
-    //     required: true,
-    //     enum: ['interviewer', 'candidate'],
-    // },
-}, { 
-    timestamps: true,
-    discriminatorKey: 'role' 
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  },
+
+  password: {
+    type: String,
+    required: true,
+  },
+
+  // 🌟 Common field for all users
+  profilePic: {
+    type: String,
+    default: "", // Cloudinary URL or blank
+  },
+
+}, {
+  timestamps: true,
+  discriminatorKey: 'role',
 });
 
-// --- NEW: Password Hashing Middleware ---
-// This function runs automatically BEFORE a document is saved to the database.
+// 2️⃣ Password Hashing Middleware
 UserSchema.pre('save', async function (next) {
-    // Only hash the password if it has been modified (or is new)
-    if (!this.isModified('password')) {
-        return next();
-    }
-
-    try {
-        // Generate a salt
-        const salt = await bcrypt.genSalt(10);
-        // Hash the password with the salt
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(error);
-    }
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
-// --- NEW: Password Comparison Method ---
-// This adds a custom method to every user document to compare passwords.
+// 3️⃣ Password Comparison Method
 UserSchema.methods.comparePassword = async function (candidatePassword) {
-    try {
-        // Use bcrypt to compare the provided password with the stored hash
-        return await bcrypt.compare(candidatePassword, this.password);
-    } catch (error) {
-        throw new Error(error);
-    }
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
-
-// 2. Create the Base User Model
+// 4️⃣ Create Base Model
 const User = mongoose.model('User', UserSchema);
 
-// 3. Create Discriminators
+// 5️⃣ Create Discriminators (Specialized roles)
+
+// 🧑‍💼 INTERVIEWER SCHEMA (Company, Department, Position)
 const Interviewer = User.discriminator('interviewer', new mongoose.Schema({
-    company: { type: String },
-    department: { type: String },
+  company: { type: String, required: false },
+  department: { type: String, required: false },
+  position: { type: String, required: false }, // 🌟 Newly added field
+  companyProof: { type: String },
 }));
 
+// 👨‍💻 CANDIDATE SCHEMA (Resume, Portfolio)
 const Candidate = User.discriminator('candidate', new mongoose.Schema({
-    resume_url: { type: String },
-    portfolio_url: { type: String },
+  resume_url: { type: String },
+  education: { type: String },
+  skills: { type: [String] },
+  experience: { type: String },
 }));
 
-// 4. Export all the models
+// 6️⃣ Export All Models
 module.exports = { User, Interviewer, Candidate };
