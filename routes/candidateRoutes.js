@@ -7,6 +7,7 @@ const router = express.Router();
 const candidateProfileController = require("../controllers/candidateProfileController")
 const upload = require("../middlewares/upload");
 
+
 router.post("/signup",signup);
 router.post("/login",login);
 router.post("/logout",logout);
