@@ -4,7 +4,7 @@ const { Candidate, Interviewer } = require("../models/User");
 // Middleware for Candidate
 exports.protectCandidate = async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.candidatetoken;
     if (!token) return res.status(401).json({ message: "Not authorized, no token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -21,7 +21,7 @@ exports.protectCandidate = async (req, res, next) => {
 // Middleware for Interviewer
 exports.protectInterviewer = async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.interviewertoken;
     if (!token) return res.status(401).json({ message: "Not authorized, no token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

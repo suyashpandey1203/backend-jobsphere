@@ -49,7 +49,7 @@ exports.login = async (req, res) => {
     const token = generateToken(candidate._id, "candidate");
 
     // ✅ Use the shared cookie options from app.locals
-    res.cookie("token", token, req.app.locals.cookieOptions);
+    res.cookie("candidatetoken", token, req.app.locals.cookieOptions);
 
     res.status(200).json({
       message: "Candidate login successful",
@@ -65,7 +65,8 @@ exports.login = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     // ✅ Use the shared cookie options for consistency
-    res.clearCookie("token", req.app.locals.cookieOptions);
+    console.log(req);
+    res.clearCookie("candidatetoken", req.app.locals.cookieOptions);
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Logout Error:", error);
@@ -76,7 +77,7 @@ exports.logout = async (req, res) => {
 // ----------------- DELETE ACCOUNT -----------------
 exports.deleteAccount = async (req, res) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.candidatetoken;
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -86,7 +87,7 @@ exports.deleteAccount = async (req, res) => {
     await Candidate.findByIdAndDelete(decoded.id);
 
     // ✅ Use the shared cookie options for consistency
-    res.clearCookie("token", req.app.locals.cookieOptions);
+    res.clearCookie("candidatetoken", req.app.locals.cookieOptions);
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
@@ -99,7 +100,7 @@ exports.deleteAccount = async (req, res) => {
 exports.verifyAuth = async (req, res) => {
   // ... (No changes needed here)
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.candidatetoken;
     if (!token) return res.json({ loggedIn: false });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

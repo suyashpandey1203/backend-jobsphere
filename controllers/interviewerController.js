@@ -55,7 +55,7 @@ exports.login = async (req, res) => {
     const token = generateToken(interviewer._id, "interviewer");
 
     // ✅ Use the shared cookie options from app.locals
-    res.cookie("token", token, req.app.locals.cookieOptions);
+    res.cookie("interviewertoken", token, req.app.locals.cookieOptions);
 
     res.status(200).json({
       message: "Interviewer login successful",
@@ -80,7 +80,7 @@ exports.login = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     // ✅ Use the shared cookie options for consistency
-    res.clearCookie("token", req.app.locals.cookieOptions);
+    res.clearCookie("interviewertoken", req.app.locals.cookieOptions);
     res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Logout Error:", error);
@@ -107,7 +107,7 @@ exports.deleteAccount = async (req, res) => {
 
     // ✅ Use the shared cookie options for consistency
 
-    res.clearCookie("token", req.app.locals.cookieOptions);
+    res.clearCookie("interviewertoken", req.app.locals.cookieOptions);
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
@@ -119,7 +119,7 @@ exports.deleteAccount = async (req, res) => {
 // ----------------- VERIFY AUTH -----------------
 exports.verifyAuth = async (req, res) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.interviewertoken;
     if (!token) return res.json({ loggedIn: false });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
