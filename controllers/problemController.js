@@ -4,8 +4,8 @@ puppeteer.use(StealthPlugin());
 
 const fetchAtCoderProblem = async (req, res) => {
     
-    const url = `https://atcoder.jp/contests/abc426/tasks/abc426_a`; // static for now
-    console.log("ok")
+    // const url = `https://atcoder.jp/contests/abc426/tasks/abc426_a`; // static for now
+    // console.log("ok")
     let browser;
     try {
         browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });

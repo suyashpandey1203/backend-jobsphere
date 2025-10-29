@@ -4,30 +4,15 @@ const assessmentController = require('../controllers/AssessmentController');
 const { protectInterviewer } = require('../middlewares/authMiddleware');
 
 // Specific routes first 👇
-router.get('/latest', protectInterviewer, (req, res, next) => {
-  console.log("latest");
-  next();
-}, assessmentController.getLatestAssessments);
+router.get('/latest', protectInterviewer,assessmentController.getLatestAssessments);
 
-router.get("/my-assessments", protectInterviewer, (req, res, next) => {
-  console.log("/my-assessments");
-  next();
-}, assessmentController.getMyAssessments);
+router.get("/my-assessments", protectInterviewer,  assessmentController.getMyAssessments);
 
-router.post('/', protectInterviewer, (req, res, next) => {
-  console.log("/");
-  next();
-}, assessmentController.createAssessment);
+router.post('/', protectInterviewer, assessmentController.createAssessment);
 
 // Dynamic routes later 👇
-router.get('/:id', protectInterviewer, (req, res, next) => {
-  console.log(":id");
-  next();
-}, assessmentController.getAssessmentDetails);
+router.get('/:id', protectInterviewer, assessmentController.getAssessmentDetails);
 
-router.post('/:id/invite', protectInterviewer, (req, res, next) => {
-  console.log(":id/invite");
-  next();
-}, assessmentController.inviteParticipant);
+router.post('/:id/invite', protectInterviewer,assessmentController.inviteParticipant);
 
 module.exports = router;

@@ -1,5 +1,7 @@
 const { Interviewer } = require("../models/User");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const cloudinary = require("../config/cloudinary");
 
 // 🔹 Helper: Generate JWT
 const generateToken = (id, role) => {
@@ -8,9 +10,8 @@ const generateToken = (id, role) => {
 
 // ----------------- SIGNUP -----------------
 exports.signup = async (req, res) => {
-  // ... (No changes needed here)
   try {
-    const { name, email, password, company, department } = req.body;
+    const { name, email, password, company, department, position } = req.body;
 
     const existingUser = await Interviewer.findOne({ email });
     if (existingUser) {
@@ -23,6 +24,7 @@ exports.signup = async (req, res) => {
       password,
       company,
       department,
+      position,
     });
 
     res.status(201).json({
@@ -39,7 +41,7 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
+    console.log(email)
     const interviewer = await Interviewer.findOne({ email });
     if (!interviewer) {
       return res.status(400).json({ message: "Invalid email or password" });
@@ -57,7 +59,16 @@ exports.login = async (req, res) => {
 
     res.status(200).json({
       message: "Interviewer login successful",
-      user: { id: interviewer._id, name: interviewer.name, role: "interviewer" },
+      user: {
+        id: interviewer._id,
+        name: interviewer.name,
+        email: interviewer.email,
+        role: "interviewer",
+        company: interviewer.company,
+        department: interviewer.department,
+        position: interviewer.position,
+        profilePic: interviewer.profilePic || "",
+      },
     });
   } catch (error) {
     console.error("Login Error:", error);
@@ -83,10 +94,19 @@ exports.deleteAccount = async (req, res) => {
     const user = req.user;
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Note: 'decoded' was not defined here, using req.user.id
-    await Interviewer.findByIdAndDelete(user.id);
+    // Delete profile pic from Cloudinary if exists
+    if (user.profilePicPublicId) {
+      try {
+        await cloudinary.uploader.destroy(user.profilePicPublicId);
+      } catch (err) {
+        console.warn("Cloudinary delete failed:", err.message);
+      }
+    }
+
+    await Interviewer.findByIdAndDelete(user._id);
 
     // ✅ Use the shared cookie options for consistency
+
     res.clearCookie("token", req.app.locals.cookieOptions);
 
     res.status(200).json({ message: "Account deleted successfully" });
@@ -98,7 +118,6 @@ exports.deleteAccount = async (req, res) => {
 
 // ----------------- VERIFY AUTH -----------------
 exports.verifyAuth = async (req, res) => {
-  // ... (No changes needed here)
   try {
     const token = req.cookies.token;
     if (!token) return res.json({ loggedIn: false });
@@ -115,6 +134,10 @@ exports.verifyAuth = async (req, res) => {
         name: user.name,
         email: user.email,
         role: "interviewer",
+        company: user.company,
+        department: user.department,
+        position: user.position,
+        profilePic: user.profilePic || "",
       },
     });
   } catch (error) {

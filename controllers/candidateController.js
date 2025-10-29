@@ -1,3 +1,5 @@
+const PracticeQuestion = require("../models/PracticeQuestion");
+const AssessmentParticipant = require("../models/AssessmentParticipant");
 const { Candidate } = require("../models/User");
 const jwt = require("jsonwebtoken");
 
@@ -117,3 +119,98 @@ exports.verifyAuth = async (req, res) => {
     res.json({ loggedIn: false });
   }
 };
+
+
+exports.getMyAssessments = async (req, res) => {
+  try {
+    const candidateId = req.user._id;
+    console.log(candidateId);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const assessments = await AssessmentParticipant.find({
+      user: candidateId,
+      role: "candidate",
+    })
+      .populate({
+        path: "assessment",
+        match: { date: { $gte: today } }, // Only future/upcoming
+      })
+      .sort({ "assessment.date": 1 });
+
+    const upcoming = assessments
+      .filter((ap) => ap.assessment)
+      .map((ap) => ap.assessment);
+
+    res.status(200).json({ assessments: upcoming });
+  } catch (error) {
+    console.error("Get My Assessments Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+exports.fetchAttemptCode = async (req, res) => {
+  try {
+    const { questionId, userId } = req.body;
+
+    if (!questionId || !userId) {
+      return res.status(400).json({ message: "questionId and userId are required" });
+    }
+
+    // Find existing attempt
+    let attempt = await PracticeQuestion.findOne({
+      question_id: questionId,
+      candidate: userId,
+    });
+
+    if (!attempt) {
+      // If not found, return default code
+      return res.json({ final_code: "// Start coding here..." });
+    }
+
+    res.json({ final_code: attempt.final_code });
+  } catch (err) {
+    console.error("Error in fetchAttempt:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+// controllers/practiceController.js
+exports.saveAttemptCode = async (req, res) => {
+  try {
+    const { questionId, userId, final_code } = req.body;
+
+    if (!questionId || !userId || final_code === undefined) {
+      return res.status(400).json({ message: "questionId, userId and final_code are required" });
+    }
+
+    // Find existing attempt
+    let attempt = await PracticeQuestion.findOne({
+      question_id: questionId,
+      candidate: userId,
+    });
+
+    if (!attempt) {
+      // Create new if not found
+      attempt = new PracticeQuestion({
+        question_id: questionId,
+        candidate: userId,
+        final_code,
+      });
+    } else {
+      // Update existing
+      attempt.final_code = final_code;
+    }
+
+    await attempt.save();
+
+    res.json({ final_code: attempt.final_code });
+  } catch (err) {
+    console.error("Error in saveAttempt:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+

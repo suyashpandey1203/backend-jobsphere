@@ -41,7 +41,7 @@ exports.createAssessment = async (req, res) => {
 exports.getAssessmentDetails = async (req, res) => {
     try {
         const { id: assessmentId } = req.params;
-        console.log("id : ", req.params)
+    
         
         // 1. Fetch the main assessment document and populate its `questions` array with the full question documents
         const assessment = await Assessment.findById(assessmentId).populate('questions');
