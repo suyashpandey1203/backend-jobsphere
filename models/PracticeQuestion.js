@@ -13,7 +13,7 @@ const PracticeQuestionSchema = new mongoose.Schema({
   final_code: {
     type: String,
     default: "",
-  },
+  } ,
 }, { timestamps: true });
 
 // ✅ Correct model name
